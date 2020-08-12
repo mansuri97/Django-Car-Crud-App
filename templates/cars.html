@@ -1,0 +1,233 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Car Selling Business{% endblock %}
+
+{% block content %}
+<div class="container">
+
+    <div class="row">
+      <div class="col-md-4 ">
+        <h3>ADD CAR</h3>
+        <form id="addCar" action="" method="post">
+          {% csrf_token %}
+          <div class="form-group">
+            <input class="form-control" type="text" name="description" placeholder="Description" required>
+          </div>
+          <div class="form-group">
+            <input class="form-control" type="text" name="price" placeholder="Price" required>
+          </div>
+          <div class="form-group">
+            <input class="form-control" type="number" name="quantity" placeholder="Quantity" required>
+          </div>
+          <button class="btn btn-primary form-control" type="submit">ADD</button>
+        </form>
+      </div>
+      <div class="col-md-8">
+        <h3>CARS</h3>
+        <table id="ObjTable" class="table table-striped">
+          <tr>
+            <th>Name</th>
+            <th>Price</th>
+            <th colspan="3">Quantity</th>
+          </tr>
+          {% if Objs %}
+          {% for Obj in Objs %}
+          <tr id="Obj-{{Obj.id}}">
+              <td class="ObjDescription ObjData" name="description">{{Obj.description}}</td>
+              <td class="ObjPrice ObjData" name="price">{{Obj.price}}</td>
+              <td class="ObjQuantity ObjData" name="quantity">{{Obj.quantity}}</td>
+              <td align="center">
+                  <button class="btn btn-success form-control" onClick="editObj({{Obj.id}})" data-toggle="modal" data-target="#myModal")">EDIT</button>
+              </td>
+              <td align="center">
+
+                  {% csrf_token %}
+                  <button class="btn btn-danger form-control" onClick="deleteObj({{Obj.id}})">DELETE</button>
+
+              </td>
+          </tr>
+          {% endfor %}
+          {% else %}
+            No Objs
+          {% endif %}
+        </table>
+      </div>
+    </div>
+  </div>
+  <!-- Modal -->
+  <div class="modal fade" id="myModal" tabindex="-1" role="dialog" aria-labelledby="myModalLabel">
+    <div class="modal-dialog" role="document">
+      <div class="modal-content">
+        <div class="modal-header">
+          <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">×</span></button>
+          <h4 class="modal-title" id="myModalLabel">Update Car</h4>
+        </div>
+        <form id="updateObj" action="">
+        <div class="modal-body">
+            <input class="form-control" id="form-id" type="hidden" name="formId"/>
+            <label for="name">Description</label>
+            <input class="form-control" id="form-description" type="text" name="formDescription"/>
+            <label for="price">Price</label>
+            <input class="form-control" id="form-price" type="text" name="formPrice"/>
+            <label for="quantity">Quantity</label>
+            <input class="form-control" id="form-quantity" type="number" name="formQuantity"/>
+        </div>
+        <div class="modal-footer">
+            <button type="submit" class="btn btn-primary" >Save changes</button>
+            <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+        </div>
+        </form>
+      </div>
+    </div>
+  </div>
+{% endblock %}
+{% block javascript %}
+
+
+<script>
+
+
+
+
+$("form#addCar").submit(function() {
+    var csrf = "input[name=csrfmiddlewaretoken]"
+    var descriptionInput = $('input[name="description"]').val().trim();
+    var priceInput = $('input[name="price"]').val().trim();
+    var quantityInput = $('input[name="quantity"]').val().trim();
+
+
+    if (descriptionInput && priceInput && quantityInput) {
+
+
+        $.ajax({
+            method:'POST',
+            url: '{% url "car_create" %}',
+            data: {
+                'description': descriptionInput,
+                'price': priceInput,
+                'quantity': quantityInput,
+                'csrfmiddlewaretoken' : $(csrf).val()
+
+
+            },
+            dataType: 'json',
+            success: function (data) {
+                if (data.Obj) {
+                  addToCarTable(data.Obj);
+                }
+            }
+        });
+      } else {
+        alert("All fields must be valid!");
+    }
+    $('form#addCar').trigger("reset");
+    return false;
+});
+
+
+function addToCarTable(Obj) {
+  $("#ObjTable > tbody:last-child").append(`
+        <tr id="Obj-${Obj.id}">
+            <td class="ObjDescription" name="description">${Obj.description}</td>
+            '<td class="ObjPrice" name="price">${Obj.price}</td>
+            '<td class="ObjQuantity" name="quantity">${Obj.quantity}</td>
+            '<td align="center">
+                <button class="btn btn-success form-control" onClick="editObj(${Obj.id})" data-toggle="modal" data-target="#myModal")">EDIT</button>
+            </td>
+            <td align="center">
+                <button class="btn btn-danger form-control" onClick="deleteObj(${Obj.id})">DELETEME</button>
+            </td>
+        </tr>
+    `);
+}
+
+
+
+
+
+
+$("form#updateObj").submit(function() {
+    var idInput = $('input[name="formId"]').val().trim();
+    var descriptionInput = $('input[name="formDescription"]').val().trim();
+    var priceInput = $('input[name="formPrice"]').val().trim();
+    var quantityInput = $('input[name="formQuantity"]').val().trim();
+    if (descriptionInput && priceInput && quantityInput) {
+
+        $.ajax({
+            type:'PUT',
+            url: '{% url "car_update" %}',
+            data: {
+                'id': idInput,
+                'description': descriptionInput,
+                'price': priceInput,
+                'quantity': quantityInput
+            },
+            dataType: 'json',
+            success: function (data) {
+                if (data.Obj) {
+                  updatedCarTable(data.Obj);
+                }
+            }
+        });
+       } else {
+        alert("All fields must be valid!");
+    }
+    $('form#updateObj').trigger("reset");
+    $('#myModal').modal('hide');
+    return false;
+});
+
+
+function editObj(id) {
+  if (id) {
+    table_row_id = "#Obj-" + id;
+    description = $(table_row_id).find(".ObjDescription").text();
+    price = $(table_row_id).find(".ObjPrice").text();
+    quantity = $(table_row_id).find(".ObjQuantity").text();
+    $('#form-id').val(id);
+    $('#form-description').val(description);
+    $('#form-price').val(price);
+    $('#form-quantity').val(quantity);
+  }
+}
+function updatedCarTable(Obj){
+    $("#ObjTable #Obj-" + Obj.id).children(".ObjData").each(function() {
+        var feature = $(this).attr("name");
+        if (feature == "description") {
+          $(this).text(Obj.description);
+        } else if (feature == "price") {
+          $(this).text(Obj.price);
+        } else {
+          $(this).text(Obj.age);
+        }
+      });
+}
+
+function deleteObj(id) {
+
+
+  var action = confirm("Are you sure you want to delete this car?");
+  if (action != false) {
+    $.ajax({
+        type:'DELETE',
+        url: '{% url "car_delete" %}',
+        data: {
+            'id': id,
+
+        },
+        dataType: 'json',
+        success: function (data) {
+            if (data.deleted) {
+              $("#ObjTable #Obj-" + id).remove();
+            }
+        }
+    });
+  }
+}
+
+
+
+
+</script>
+{% endblock javascript %}
